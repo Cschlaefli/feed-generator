@@ -16,7 +16,7 @@ import { Database } from '../db'
 export abstract class FirehoseSubscriptionBase {
   public sub: Subscription<RepoEvent>
 
-  constructor(public db: Database, public service: string) {
+  constructor(public db: Database, public service: string, public tags: Set<string>) {
     this.sub = new Subscription({
       service: service,
       method: ids.ComAtprotoSyncSubscribeRepos,

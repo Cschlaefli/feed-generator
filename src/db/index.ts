@@ -1,12 +1,12 @@
-import SqliteDb from 'better-sqlite3'
-import { Kysely, Migrator, SqliteDialect } from 'kysely'
+import { Pool, PoolConfig } from 'pg';
+import { Kysely, Migrator, PostgresDialect } from 'kysely'
 import { DatabaseSchema } from './schema'
 import { migrationProvider } from './migrations'
 
-export const createDb = (location: string): Database => {
+export const createDb = (poolConfig : PoolConfig ): Database => {
   return new Kysely<DatabaseSchema>({
-    dialect: new SqliteDialect({
-      database: new SqliteDb(location),
+    dialect: new PostgresDialect({
+      pool: new Pool(poolConfig)
     }),
   })
 }
