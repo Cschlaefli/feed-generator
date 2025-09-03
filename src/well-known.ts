@@ -4,6 +4,10 @@ import { AppContext } from './config'
 const makeRouter = (ctx: AppContext) => {
   const router = express.Router()
 
+  router.get('/health/liveness', (_req, res) => {
+    res.sendStatus(200)
+  });
+
   router.get('/.well-known/did.json', (_req, res) => {
     if (!ctx.cfg.serviceDid.endsWith(ctx.cfg.hostname)) {
       return res.sendStatus(404)
