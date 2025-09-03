@@ -19,7 +19,7 @@ const run = async () => {
       connectionString: maybeStr(process.env.FEEDGEN_PSQL_CONNECTION_STRING),
     },
     tags: maybeStr(process.env.FEEDGEN_TAGS)?.split(" ") ?? [],
-    sqliteLocation: maybeStr(process.env.FEEDGEN_SQLITE_LOCATION) ?? ':memory:',
+    runFirehose: process.env.FEEDGEN_RUN_FIREHOSE === 'true',
     subscriptionEndpoint:
       maybeStr(process.env.FEEDGEN_SUBSCRIPTION_ENDPOINT) ??
       'wss://bsky.network',

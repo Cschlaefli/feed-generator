@@ -12,9 +12,9 @@ export type Config = {
   port: number
   listenhost: string
   hostname: string
-  sqliteLocation: string
   psql: PoolConfig
   tags: string[]
+  runFirehose: boolean
   subscriptionEndpoint: string
   serviceDid: string
   publisherDid: string
