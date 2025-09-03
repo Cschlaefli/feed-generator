@@ -41,10 +41,19 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       .map((create) => {
         // console.log("record", create.record)
         // console.log("record.facets.features", create.record.facets?.map((facet) => facet.features))
-        // map alf-related posts to a db row
+
+        const features = create.record.facets?.flatMap((facet) => facet.features) ?? [];
+        const featureTags = features.filter((feature) => feature.$type === 'app.bsky.richtext.facet#tag')
+                            .map((feature) => (feature.tag as string).toLowerCase());
+
+        const tags = [
+          ...(create.record.tags ?? []),
+          ...featureTags
+        ]
         return {
           uri: create.uri,
           cid: create.cid,
+          tags,
           indexedAt: new Date().toISOString(),
         }
       })
@@ -56,11 +65,52 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         .execute()
     }
     if (postsToCreate.length > 0) {
-      await this.db
+      const justPosts = postsToCreate.map((post) => ({
+        uri: post.uri,
+        cid: post.cid,
+        indexedAt: post.indexedAt,
+      }));
+
+      this.db
         .insertInto('post')
-        .values(postsToCreate)
+        .values(justPosts)
         .onConflict((oc) => oc.doNothing())
-        .execute()
+        .execute();
+      //   .compile();
+      // console.log('Inserting posts', postInsert.sql, postInsert.parameters);
+      // await this.db.executeQuery(postInsert);
+      for(const post of postsToCreate.values()) {
+        const newTags = post.tags.map((tag) => ({ value: tag.toLowerCase() }));
+        // if tags empty
+        if (newTags.length <= 0){
+          console.log("No tags for post", post.uri);
+          continue;
+        }else{
+          console.log("Adding tags for post", post.tags.length);
+        }
+        const tagInsert = await this.db.insertInto('tag')
+            .values(newTags)
+            .onConflict((oc) => oc.column('value').doNothing())
+            .returning("id")
+            .compile();
+        // console.log('Inserting tags', tagInsert.sql, tagInsert.parameters);
+        const createTags = await this.db.executeQuery(tagInsert);
+        // console.log("Created/fetched tags ", createTags.rows);
+        // console.log("Post tags ", post.tags);
+
+        const postTags = (createTags?.rows?.filter((tag) => tag?.id) as {id : number}[])
+        .map((tag) => ({
+          uri: post.uri,
+          tag_id: tag.id,
+        })) ?? []
+        if (postTags.length > 0) {
+          await this.db
+            .insertInto('post_tags')
+            .values(postTags)
+            .onConflict((oc) => oc.doNothing())
+            .execute();
+        }
+      }
     }
   }
 }
