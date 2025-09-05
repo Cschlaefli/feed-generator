@@ -46,10 +46,13 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         const features = create.record.facets?.flatMap((facet) => facet.features) ?? [];
         const featureTags = features.filter((feature) => feature.$type === 'app.bsky.richtext.facet#tag')
                             .map((feature) => (feature.tag as string).toLowerCase());
+        const selfLabels = create.record.labels?.$type === 'com.atproto.label.defs#selfLabels' ?
+                            (create.record.labels?.values as SelfLabel[]).map((label) => label.val) : [];
 
         const tags = [
           ...(create.record.tags ?? []),
-          ...featureTags
+          ...featureTags,
+          ...selfLabels
         ]
         return {
           uri: create.uri,
@@ -77,9 +80,11 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         .values(justPosts)
         .onConflict((oc) => oc.doNothing())
         .execute();
+      console.log(`Inserted ${justPosts.length} posts, upserting tags...`);
       
       for(const post of postsToCreate.values()) {
         const newTags = post.tags.map((tag) => tag.toLowerCase());
+        console.log(`Upserting ${newTags.length} tags for post ${post.uri}`);
         for (const tag of newTags) {
             const row = await this.db
               .insertInto('tag')
