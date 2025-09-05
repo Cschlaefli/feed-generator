@@ -4,6 +4,7 @@ import {
   isCommit,
 } from './lexicon/types/com/atproto/sync/subscribeRepos'
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
+import { sql } from 'kysely'
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   async handleEvent(evt: RepoEvent) {
@@ -76,50 +77,29 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         .values(justPosts)
         .onConflict((oc) => oc.doNothing())
         .execute();
+      
       for(const post of postsToCreate.values()) {
         const newTags = post.tags.map((tag) => tag.toLowerCase());
-        // if tags empty
-        if (newTags.length <= 0){
-          console.log("No tags for post", post.uri);
-          continue;
-        }else{
-          console.log("Adding tags for post", post.tags.length);
-        }
-        const newTagIds : {id : number}[] = [];
-        const insertTags : {value: string}[] = [];
-        for(const tag of newTags) {
-          const existing = await this.db
-            .selectFrom('tag')
-            .selectAll()
-            .where('value', '=', tag)
-            .executeTakeFirst();
-          if(existing) {
-            newTagIds.splice(parseInt(tag), 1);
-          }else{
-            insertTags.push({value: tag});
-          }
-        }
+        for (const tag of newTags) {
+            const row = await this.db
+              .insertInto('tag')
+              .values({ value: tag })
+              .onConflict(oc =>
+                oc.column('value').doUpdateSet({
+                  // noop update so we can RETURNING id on conflict
+                  value: sql`excluded.value`,
+                })
+              )
+              .returning('id')
+              .executeTakeFirstOrThrow();
 
-        if(insertTags.length !== 0){
-          const tagInsert = await this.db.insertInto('tag')
-              .values(insertTags)
-              .onConflict((oc) => oc.column('value').doNothing())
-              .returning("id")
-              .compile();
-          const createTags = await this.db.executeQuery(tagInsert);
-          newTagIds.push(...(createTags.rows as {id : number}[]));
-        }
+            const tagId = row.id;
 
-        const postTags = newTagIds.map((id) => ({
-          uri: post.uri,
-          tag_id: id.id,
-        }));
-        if (postTags.length > 0) {
-          await this.db
-            .insertInto('post_tags')
-            .values(postTags)
-            .onConflict((oc) => oc.doNothing())
-            .execute();
+            await this.db
+              .insertInto('post_tags')
+              .values({ uri: post.uri, tag_id: tagId })
+              .onConflict(oc => oc.columns(['uri', 'tag_id']).doNothing())
+              .execute();
         }
       }
     }
