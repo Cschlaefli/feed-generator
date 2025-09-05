@@ -8,6 +8,7 @@ import describeGenerator from './methods/describe-generator'
 import { createDb, Database, migrateToLatest } from './db'
 import { FirehoseSubscription } from './subscription'
 import { AppContext, Config } from './config'
+import { getTagIds } from './tag-helper'
 import wellKnown from './well-known'
 
 export class FeedGenerator {
@@ -29,7 +30,7 @@ export class FeedGenerator {
     this.cfg = cfg
   }
 
-  static create(cfg: Config) {
+  static async create(cfg: Config) {
     const app = express()
     const db = createDb(cfg.psql)
     const firehose = new FirehoseSubscription(db, cfg.subscriptionEndpoint, new Set(cfg.tags.map((tag) => tag.toLowerCase())))
@@ -52,6 +53,7 @@ export class FeedGenerator {
       db,
       didResolver,
       cfg,
+      excludeTagIds: await getTagIds(db, cfg.excludeTags),
     }
     feedGeneration(server, ctx)
     describeGenerator(server, ctx)
