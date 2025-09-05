@@ -6,6 +6,7 @@ export type AppContext = {
   db: Database
   didResolver: DidResolver
   cfg: Config
+  excludeTagIds: number[]
 }
 
 export type Config = {
