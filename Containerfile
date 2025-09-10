@@ -1,8 +1,13 @@
+# syntax=docker/dockerfile:1.7
 ARG NODE_ENV=production
 ARG NODE_VERSION=current
+ARG TARGETPLATFORM
+ARG TARGETARCH
 
-# Use a Node.js base image
-FROM --platform=$BUILDPLATFORM node:$NODE_VERSION-alpine as base
+# Use a Node.js base image. Use TARGETPLATFORM here so BuildKit selects
+# the proper architecture for multi‑arch builds. The target args are
+# passed in from the GitHub workflow via build‑args.
+FROM --platform=$TARGETPLATFORM node:$NODE_VERSION-alpine as base
 WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -12,19 +17,19 @@ VOLUME [ "/pnpm-store", "/app/node_modules" ]
 RUN pnpm config --global set store-dir /pnpm-store
 
 # dev deps
-FROM --platform=$BUILDPLATFORM base as deps
+FROM --platform=$TARGETPLATFORM base as deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # prod-only deps
-FROM --platform=$BUILDPLATFORM base as prod-deps
+FROM --platform=$TARGETPLATFORM base as prod-deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 
 # build app
-FROM --platform=$BUILDPLATFORM base as builder
+FROM --platform=$TARGETPLATFORM base as builder
 WORKDIR /app
 COPY . .
 
