@@ -9,20 +9,20 @@ on:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        targets:
-          - platform: linux/amd64
-            os: ubuntu-latest
-          - platform: linux/arm64
-            os: ubuntu-24.04-arm
-    runs-on: ${{ matrix.targets.os }}
+    # strategy:
+      # fail-fast: false
+      # matrix:
+        # targets:
+          # - platform: linux/amd64
+            # os: ubuntu-latest
+          # - platform: linux/arm64
+            # os: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
-      - name: Prepare
-        run: |
-          platform=${{ matrix.targets.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+      # - name: Prepare
+      #   run: |
+      #     platform=${{ matrix.targets.platform }}
+      #     echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -61,7 +61,7 @@ jobs:
           context: .
           file: Containerfile
           push: true
-          platforms: ${{ matrix.targets.platform }}
+          platforms: linux/amd64,linux/arm64
           # Emit provenance and SBOMs for additional security and traceability.
           provenance: mode=max
           sbom: true
