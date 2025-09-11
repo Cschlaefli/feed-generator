@@ -22,6 +22,11 @@ jobs:
             os: ubuntu-24.04-arm
     runs-on: ${{ matrix.targets.os }}
     steps:
+      - name: Prepare # ensure unique artifact names
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
