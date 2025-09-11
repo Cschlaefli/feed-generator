@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Prepare # ensure unique artifact names
         run: |
-          platform=${{ matrix.platform }}
+          platform=${{ matrix.targets.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Checkout repository
